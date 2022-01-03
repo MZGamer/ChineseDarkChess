@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace ChineseDarkChess {
     [Serializable]
     public class MoveData {
-        
+
         public int fromX { get; set; }
         public int fromY { get; set; }
         public int toX { get; set; }

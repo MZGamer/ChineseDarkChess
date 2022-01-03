@@ -54,6 +54,7 @@
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
     <Compile Include="MoveData.cs" />
+    <Compile Include="Packet.cs" />
     <Compile Include="PieceEnum.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -131,6 +132,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="imgs\background.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\multiplayer_Server\multiplayer_Server\multiplayer_Server\multiplayer_Server.csproj">
+      <Project>{da94062c-475d-462e-b8aa-7e3b99e1b69c}</Project>
+      <Name>multiplayer_Server</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

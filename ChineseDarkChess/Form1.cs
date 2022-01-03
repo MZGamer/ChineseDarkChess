@@ -7,6 +7,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Net.Sockets;
+using System.Net;
+using System.Threading;
+using ChineseDarkChess;
+using multiplayer_Server;
+
 
 namespace ChineseDarkChess {
     public partial class Form1 : Form {
@@ -33,10 +39,52 @@ namespace ChineseDarkChess {
         private bool isPlayer1Black = false;
         private bool isGameStart = false;
 
+        private static byte[] result = new byte[2048];
+        Socket clientSocket;
+
         public Form1() {
             InitializeComponent();
             initButtons();
+            IPAddress ip = IPAddress.Parse("127.0.0.1");
+            Socket clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            try {
+                clientSocket.Connect(new IPEndPoint(ip, 8885)); //配置伺服器IP與埠
+                Console.WriteLine("連線伺服器成功");
+                Thread receiveThread = new Thread(ReceiveMessage);
+                receiveThread.Start(clientSocket);
+            } catch {
+                Console.WriteLine("連線伺服器失敗，請按回車鍵退出！");
+                return;
+            }
         }
+        private void ReceiveMessage(object clientSocket) {
+            Socket myClientSocket = (Socket)clientSocket;
+            while (true) {
+                try {
+                    //通過clientSocket接收資料
+                    int receiveNumber = myClientSocket.Receive(result);
+                    if (receiveNumber == 0) {
+                        throw new Exception(String.Format("{0}' has disconnected", myClientSocket.RemoteEndPoint.ToString()));
+                    }
+                    byte[] des = (byte[])result.Clone();
+                    Array.Resize(ref des, receiveNumber);
+                    object obj = Packet.Deserialize(des);
+                    if (obj is Packet) {
+                        Packet pkt = (Packet)obj;
+                        Console.WriteLine(pkt.command.ToString());
+                    } else {
+                        Console.WriteLine(String.Format("接收伺服端 {0} 訊息 {1}", myClientSocket.RemoteEndPoint.ToString(), Encoding.ASCII.GetString(result, 0, receiveNumber)));
+                    }
+                } catch (Exception ex) {
+                    if (myClientSocket.Connected) {
+                        myClientSocket.Shutdown(SocketShutdown.Both);
+                        myClientSocket.Close();
+                    }
+                    break;
+                }
+            }
+        }
+
 
         private void initButtons() {
 
