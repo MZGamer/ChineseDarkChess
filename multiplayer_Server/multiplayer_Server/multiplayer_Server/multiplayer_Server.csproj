@@ -6,4 +6,13 @@
     <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Reference Include="MoveData">
+      <HintPath>C:\Users\sacre\source\repos\MoveData\MoveData\bin\Debug\MoveData.dll</HintPath>
+    </Reference>
+    <Reference Include="packet">
+      <HintPath>C:\Users\sacre\source\repos\packet\packet\bin\Debug\packet.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>

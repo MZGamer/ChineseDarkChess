@@ -10,6 +10,9 @@ using System.Windows.Forms;
 using System.Net.Sockets;
 using System.Net;
 using System.Threading;
+using moveData;
+using packet;
+using ChineseDarkChess;
 
 namespace multiplayer_Server {
     public partial class serverGUI : Form {
@@ -18,12 +21,16 @@ namespace multiplayer_Server {
         private static int myProt = 8885;   //埠
         static Socket serverSocket;
         private delegate void DelUpdateMessage(string sMessage);
-
         private delegate void DelUpdateSocket(Socket s, int c);
+        private delegate void DelPacketAnalyze(Packet pkt);
 
         Socket player1 = null;
         Socket player2 = null;
         int connectionNumber = 0;
+
+        bool gameStart;
+        Packet gameStartHold = null;
+        DarkChessModel darkChessModel = null;
         
 
 
@@ -37,7 +44,8 @@ namespace multiplayer_Server {
             Thread listening = new Thread(ListenClientConnect);
             listening.Start();
             updateMessage("Server Initialize Complete");
-            
+
+            gameStart = false;
 
         }
 
@@ -55,12 +63,23 @@ namespace multiplayer_Server {
                     continue;
                 }
                 connectionNumber++;
+
                 //clientSocket.Send(Encoding.ASCII.GetBytes("Server Say Hello"));
                 updateMessage(IPAddress.Parse(((IPEndPoint)clientSocket.RemoteEndPoint).Address.ToString()) + "joined the server ");
                 setPlayer(clientSocket, 1);
-                broadcast(new Packet(Command.FLIP, new MoveData(0, 0, 0, 0)));
+                //broadcast(new Packet(Command.FLIP, new MoveData(0, 0, 0, 0)));
                 Thread receiveThread = new Thread(ReceiveMessage);
                 receiveThread.Start(clientSocket);
+
+                if (player1 != null && player2 != null) {
+                    if (!gameStart) {
+                        gameStart = true;
+                        darkChessModel = new DarkChessModel();
+                        darkChessModel.initBoard();
+                        darkChessModel.isPlayer1Turn = true;
+                        broadcast(null, 2);
+                    }
+                }
             }
         }
 
@@ -75,13 +94,12 @@ namespace multiplayer_Server {
                     }
                     object obj = Packet.Deserialize(result);
                     if(obj is Packet) {
-
+                        packetAnalyze((Packet)obj);
                     } else {
                         updateMessage(String.Format("接收客戶端 {0} 訊息 {1}", myClientSocket.RemoteEndPoint.ToString(), Encoding.ASCII.GetString(result, 0, receiveNumber)));
                     }
                 } catch (Exception ex) {
                     updateMessage(ex.Message);
-                    connectionNumber--;
                     if(myClientSocket.Connected) {
                         myClientSocket.Shutdown(SocketShutdown.Both);
                         myClientSocket.Close();
@@ -92,13 +110,83 @@ namespace multiplayer_Server {
             }
         }
 
-        private void broadcast(Packet packet) {
-            Packet pkt = Packet.Serialize(packet);
-            if (player1 != null)
-                player1.Send(pkt.Data);
-            object test = Packet.Deserialize(pkt.Data);
-            if (player2 != null)
-                player2.Send(pkt.Data);
+        private void broadcast(Packet packet, int n) {
+            switch (n) {
+                case 1:
+                    Packet pkt = Packet.Serialize(packet);
+                    if (player1 != null)
+                        player1.Send(pkt.Data);
+                    if (player2 != null)
+                        player2.Send(pkt.Data);
+                    break;
+                case 2:
+                    Packet pkt2 = new Packet(Command.GAME_START, darkChessModel.getBoard(), darkChessModel.redPiecesTaken, darkChessModel.blackPiecesTaken);
+                    pkt2.playerStatusChange = true;
+                    player1.Send(Packet.Serialize(pkt2).Data);
+
+                    pkt2.playerStatusChange = false;
+                    player2.Send(Packet.Serialize(pkt2).Data);
+                    break;
+            }
+
+        }
+
+        private void packetAnalyze(Packet pkt) {
+            if (this.InvokeRequired) // 若非同執行緒
+{
+                DelPacketAnalyze del = new DelPacketAnalyze(packetAnalyze); //利用委派執行
+                this.Invoke(del, pkt);
+                //同執行緒
+            } else {
+                switch (pkt.command) {
+                    case Command.FLIP:
+                        MoveData flipPos = pkt.moveData;
+                        darkChessModel.flip(flipPos.fromX, flipPos.fromY);
+                        darkChessModel.isPlayer1Turn = !darkChessModel.isPlayer1Turn;
+                        Packet sent = new Packet(Command.UPDATE_BOARD, darkChessModel.getBoard(), darkChessModel.redPiecesTaken, darkChessModel.blackPiecesTaken);
+                        
+                        if (!darkChessModel.isGameStart) {
+                            gameStartHold = sent;
+                            bool isPlayer1Black = false;
+                            if (darkChessModel.getBoard()[flipPos.fromX, flipPos.fromY] > 0) {
+                                isPlayer1Black = true;
+                            } else {
+                                isPlayer1Black = false;
+                            }
+
+                            darkChessModel.isGameStart = true;
+                            Packet setPlayerColor = new Packet(Command.COLOR_ASSIGN, isPlayer1Black);
+                            player1.Send(Packet.Serialize(setPlayerColor).Data);
+                            setPlayerColor.playerStatusChange = !setPlayerColor.playerStatusChange;
+                            player2.Send(Packet.Serialize(setPlayerColor).Data);
+                        }
+                        broadcast(sent, 1);
+                        break;
+                    case Command.COLOR_ASSIGN:
+                        darkChessModel.isGameStart = true;
+                        pkt.playerStatusChange = !pkt.playerStatusChange;
+                        player2.Send(Packet.Serialize(pkt).Data);
+                        if (gameStartHold != null) {
+                            broadcast(gameStartHold, 1);
+                            gameStartHold = null;
+                        }
+                        break;
+                    case Command.MOVE://MOVE
+                        bool isMoveValid = darkChessModel.sumbitMove(pkt.moveData);
+                        if (isMoveValid) {
+                            darkChessModel.isPlayer1Turn = !darkChessModel.isPlayer1Turn;
+                            broadcast(new Packet(Command.UPDATE_BOARD, darkChessModel.getBoard(), darkChessModel.redPiecesTaken, darkChessModel.blackPiecesTaken), 1);
+                        } else {
+                            if (darkChessModel.isPlayer1Turn) {
+                                player1.Send(Packet.Serialize(new Packet(Command.MOVEFAIL, null)).Data);
+                            } else {
+                                player2.Send(Packet.Serialize(new Packet(Command.MOVEFAIL, null)).Data);
+                            }
+                        }
+                        break;
+
+                }
+            }
         }
 
         private void updateMessage(string msg) {
@@ -134,6 +222,9 @@ namespace multiplayer_Server {
 
                         player1 = null;
                         player2 = null;
+                        connectionNumber = 0;
+                        gameStart = false;
+                        darkChessModel = null;
                         break;
 
                 }

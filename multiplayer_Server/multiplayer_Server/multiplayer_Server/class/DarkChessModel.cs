@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using moveData;
 
 namespace ChineseDarkChess {
     class DarkChessModel {
@@ -10,6 +11,9 @@ namespace ChineseDarkChess {
         private int[,] board = new int[Rule.BOARD_WIDTH, Rule.BOARD_HEIGHT];
         private List<int> unFlipPieces;
         private Random random = new Random();
+
+        public bool isPlayer1Turn { get; set; }
+        public bool isGameStart { get; set; }
         public List<int> redPiecesTaken { 
             get; set; 
         }
@@ -17,10 +21,12 @@ namespace ChineseDarkChess {
             get; set;
         }
         public DarkChessModel() {
+            isGameStart = false;
             initBoard();
         }
 
         public void initBoard() {
+            isPlayer1Turn = true;
             redPiecesTaken = new List<int>();
             blackPiecesTaken = new List<int>();
             unFlipPieces = new List<int> {
