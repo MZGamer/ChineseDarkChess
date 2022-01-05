@@ -36,6 +36,7 @@ namespace multiplayer_Server {
 
         public serverGUI() {
             InitializeComponent();
+            this.FormClosing += new FormClosingEventHandler(MainForm_Closing);
             IPAddress ip = IPAddress.Parse("127.0.0.1");
             serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             serverSocket.Bind(new IPEndPoint(ip, myProt));  //繫結IP地址：埠
@@ -162,15 +163,6 @@ namespace multiplayer_Server {
                         }
                         broadcast(sent, 1);
                         break;
-                    case Command.COLOR_ASSIGN:
-                        darkChessModel.isGameStart = true;
-                        pkt.playerStatusChange = !pkt.playerStatusChange;
-                        player2.Send(Packet.Serialize(pkt).Data);
-                        if (gameStartHold != null) {
-                            broadcast(gameStartHold, 1);
-                            gameStartHold = null;
-                        }
-                        break;
                     case Command.MOVE://MOVE
                         bool isMoveValid = darkChessModel.sumbitMove(pkt.moveData);
                         if (isMoveValid) {
@@ -182,6 +174,13 @@ namespace multiplayer_Server {
                             } else {
                                 player2.Send(Packet.Serialize(new Packet(Command.MOVEFAIL, null)).Data);
                             }
+                        }
+                        if(darkChessModel.isBlackWin()){
+                            //Broadcast isBlackWin
+                            broadcast(new Packet(Command.GAME_RESULT, true), 1);
+                        } else if (darkChessModel.isRedWin()) {
+                            //Broadcast !isBlackWin
+                            broadcast(new Packet(Command.GAME_RESULT, false), 1);
                         }
                         break;
 
@@ -230,6 +229,11 @@ namespace multiplayer_Server {
                 }
 
             }
+        }
+        private void MainForm_Closing(object sender, CancelEventArgs e) {
+            setPlayer(null, 2);
+            System.Environment.Exit(0);
+
         }
     }
 }
