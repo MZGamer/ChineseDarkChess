@@ -196,10 +196,12 @@ namespace multiplayer_Server {
                         }
                         if (darkChessModel.isBlackWin()) {
                             updateMessage(String.Format("BLACK is WIN"));
+                            GUIUpdate(5, String.Format("BLACK is WIN"));
                             //Broadcast isBlackWin
                             broadcast(new Packet(Command.GAME_RESULT, true), 1);
                         } else if (darkChessModel.isRedWin()) {
                             updateMessage(String.Format("RED is WIN"));
+                            GUIUpdate(5, String.Format("RED is WIN"));
                             //Broadcast !isBlackWin
                             broadcast(new Packet(Command.GAME_RESULT, false), 1);
                         }
@@ -208,12 +210,14 @@ namespace multiplayer_Server {
                         //Black Surrender
                         if (pkt.playerStatusChange) {
                             updateMessage(String.Format("BLACK is SURRENDER"));
+                            GUIUpdate(5, String.Format("BLACK is SURRENDER"));
                             //Broadcast !isBlackWin
                             broadcast(new Packet(Command.GAME_RESULT, false), 1);
 
                             //Red Surrender
                         } else if (pkt.playerStatusChange) {
                             updateMessage(String.Format("RED is SURRENDER"));
+                            GUIUpdate(5, String.Format("RED is SURRENDER"));
                             //Broadcast isBlackWin
                             broadcast(new Packet(Command.GAME_RESULT, true), 1);
                         }
@@ -303,6 +307,9 @@ namespace multiplayer_Server {
                         break;
                     case 4://GameStart
                         GameStatusLabel.Text = "Status : Gaming";
+                        break;
+                    case 5://GameOver
+                        GameStatusLabel.Text = "Status : {0}, s";
                         break;
 
                 }
