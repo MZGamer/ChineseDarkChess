@@ -215,7 +215,7 @@ namespace multiplayer_Server {
                             broadcast(new Packet(Command.GAME_RESULT, false), 1);
 
                             //Red Surrender
-                        } else if (pkt.playerStatusChange) {
+                        } else if (!pkt.playerStatusChange) {
                             updateMessage(String.Format("RED is SURRENDER"));
                             GUIUpdate(5, String.Format("RED is SURRENDER"));
                             //Broadcast isBlackWin
@@ -300,10 +300,10 @@ namespace multiplayer_Server {
                         PLAYER2IP.Text = "Player2 :";
                         break;
                     case 2://set Player1 IP
-                        PLAYER1IP.Text = String.Format("PLAYER1 : {0}", s);
+                        PLAYER1IP.Text = String.Format("Player1 : {0}", s);
                         break;
                     case 3://set Player2 IP
-                        PLAYER2IP.Text = String.Format("PLAYER2 : {0}", s);
+                        PLAYER2IP.Text = String.Format("Player2 : {0}", s);
                         break;
                     case 4://GameStart
                         GameStatusLabel.Text = "Status : Gaming";
